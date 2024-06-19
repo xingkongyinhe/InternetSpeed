@@ -11,6 +11,7 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import com.demo.research.FileSizeUtil
 import com.demo.research.databinding.FragmentHomeBinding
 
 
@@ -67,12 +68,12 @@ class HomeFragment : Fragment() {
             val rxBytesDelta: Long = currentRxBytes - previousRxBytes
             val txBytesDelta: Long = currentTxBytes - previousTxBytes
             val timeDelta: Long = currentTimeStamp - previousTimeStamp
-            val rxSpeed = rxBytesDelta * 1000 / timeDelta // Bytes per second
-            val txSpeed = txBytesDelta * 1000 / timeDelta // Bytes per second
-            Log.i(TAG, "run: Upload Speed: $txSpeed B/s, Download Speed: $rxSpeed B/s")
+            val rxSpeed = FileSizeUtil.formatFileSize(rxBytesDelta * 1000 / timeDelta) // Bytes per second
+            val txSpeed = FileSizeUtil.formatFileSize(txBytesDelta * 1000 / timeDelta) // Bytes per second
+            Log.i(TAG, "run: Upload Speed: $txSpeed, Download Speed: $rxSpeed")
 
-            binding.uploadSpeedTextView.text = "Upload Speed: $txSpeed B/s"
-            binding.downloadSpeedTextView.text = "Download Speed: $rxSpeed B/s"
+            binding.uploadSpeedTextView.text = "Upload Speed: $txSpeed"
+            binding.downloadSpeedTextView.text = "Download Speed: $rxSpeed"
             previousRxBytes = currentRxBytes
             previousTxBytes = currentTxBytes
             previousTimeStamp = currentTimeStamp
