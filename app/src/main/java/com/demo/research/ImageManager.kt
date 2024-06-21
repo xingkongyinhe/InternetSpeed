@@ -1,4 +1,4 @@
-package com.demo.research.ui.dashboard
+package com.demo.research
 
 import android.graphics.Bitmap
 import android.graphics.Canvas

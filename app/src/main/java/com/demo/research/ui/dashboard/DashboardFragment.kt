@@ -9,9 +9,10 @@ import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import com.demo.research.AppInfoManager
-import com.demo.research.PermissionsManagement
+import com.demo.research.NetworkUsageManager
 import com.demo.research.PermissionsManagement.hasUsageStatsPermission
 import com.demo.research.PermissionsManagement.requestUsageStatsPermission
+import com.demo.research.TrafficFormat
 import com.demo.research.databinding.FragmentDashboardBinding
 
 class DashboardFragment : Fragment() {
@@ -49,10 +50,19 @@ class DashboardFragment : Fragment() {
         activity?.let {
             if (!it.hasUsageStatsPermission()) {
                 it.requestUsageStatsPermission()
-            } else {
-                loadingInstallAppList()
-//                NetworkUsageManager().getNetworkUsageStats(it)
             }
+        }
+
+        binding.tvGetInstallApp.setOnClickListener {
+            loadingInstallAppList()
+        }
+
+        binding.tvGetInstallTrafficApp.setOnClickListener {
+            loadingInstallTrafficAppList()
+        }
+
+        binding.tvGetTraffic.setOnClickListener {
+            activity?.let { it1 -> NetworkUsageManager().getNetworkUsageStats(it1) }
         }
     }
 
@@ -66,6 +76,29 @@ class DashboardFragment : Fragment() {
                 Log.i(TAG, "loadingInstallAppList: total app num is $size")
                 onEach {
                     Log.i(TAG, "loadingInstallAppList: ${it.appName}")
+                }
+            }
+        }
+
+    }
+
+    /**
+     * 获取设备安装的消耗流量的程序
+     */
+    private fun loadingInstallTrafficAppList() {
+
+        context?.let { it ->
+            val localMap = NetworkUsageManager().getNetworkUsageStats(it)
+            AppInfoManager.getInternetTrafficInfoList(it, localMap).apply {
+                Log.i(TAG, "getInternetTrafficInfoList: total app num is $size")
+                onEach {
+                    Log.i(
+                        TAG,
+                        "getInternetTrafficInfoList: ${it.appName}, wifi traffic is ${
+                            TrafficFormat.formatByte(it.wifiTotalData)
+                        }, mobile traffic is ${TrafficFormat.formatByte(it.mobileTotalData)}"
+                    )
+                    localMap[it.uid]
                 }
             }
         }

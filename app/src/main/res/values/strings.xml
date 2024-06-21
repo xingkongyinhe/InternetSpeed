@@ -4,5 +4,6 @@
     <string name="title_dashboard">Dashboard</string>
     <string name="title_notifications">Notifications</string>
     <string name="get_install_app">获取安装的应用</string>
+    <string name="get_install_traffic_app">获取安装的消耗流量应用</string>
     <string name="get_traffic">获取流量</string>
 </resources>

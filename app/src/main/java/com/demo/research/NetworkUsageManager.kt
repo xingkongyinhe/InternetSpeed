@@ -1,4 +1,4 @@
-package com.demo.research.ui.dashboard
+package com.demo.research
 
 import android.annotation.SuppressLint
 import android.app.usage.NetworkStats
@@ -12,6 +12,7 @@ import android.util.Log
 import com.demo.research.DateUtil.getTimesMonthmorning
 import com.demo.research.DateUtil.getTimesmorning
 import com.demo.research.bean.TrafficBean
+import com.demo.research.bean.TrafficInfo
 
 
 /**
@@ -153,9 +154,13 @@ class NetworkUsageManager {
         return null
     }
 
-    fun getNetworkUsageStats(context: Context) {
+    fun getNetworkUsageStats(context: Context): Map<Int, TrafficInfo> {
         val networkStatsManager =
             context.getSystemService(Context.NETWORK_STATS_SERVICE) as? NetworkStatsManager
+
+        val localList = mutableListOf<TrafficInfo>()
+
+        val localMap = HashMap<Int, TrafficInfo>()
 
         try {
             // 获取Wi-Fi数据使用情况
@@ -170,20 +175,24 @@ class NetworkUsageManager {
             wifiStats?.apply {
                 while (hasNextBucket()) {
                     getNextBucket(wifiBucket)
-                    val uid = wifiBucket.uid
+                    val localUid = wifiBucket.uid
                     val rxBytes = wifiBucket.rxBytes
                     val txBytes = wifiBucket.txBytes
+                    val trafficInfo = TrafficInfo().apply {
+                        uid = localUid
+                        wifiTotalData = rxBytes + txBytes
+                        wifiRxBytes = rxBytes
+                        wifiTxBytes = txBytes
+                    }
+                    localList.add(trafficInfo)
+                    localMap[localUid] = trafficInfo
 
                     Log.d(
                         "NetworkUsage",
-                        "UID: $uid, Wi-Fi Data Received: $rxBytes bytes, Wi-Fi Data Sent: $txBytes bytes"
+                        "UID: $localUid, Wi-Fi Data Received: $rxBytes bytes, Wi-Fi Data Sent: $txBytes bytes"
                     )
                 }
             }
-
-            // 获取移动数据使用情况
-//            val telephonyManager = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
-//            val subscriberId = telephonyManager.subscriberId//subscriberId 设备唯一id（android 10及以后设备 获取不了，可不传）
 
             // 获取移动数据使用情况
             val mobileStats = networkStatsManager?.querySummary(
@@ -194,28 +203,46 @@ class NetworkUsageManager {
             )
 
 
-            mobileStats?.let {
+            mobileStats?.let { it ->
                 val mobileBucket = NetworkStats.Bucket()
                 Log.d(TAG, "getNetworkUsageStats: mobileStats")
                 while (it.hasNextBucket()) {
                     it.getNextBucket(mobileBucket)
-                    val uid = mobileBucket.uid
+                    val localUid = mobileBucket.uid
                     val rxBytes = mobileBucket.rxBytes
                     val txBytes = mobileBucket.txBytes
+                    localMap[localUid]?.let {
+                        Log.d("NetworkUsage", "UID: $localUid, map[localUid] ")
+                        it.mobileTotalData = rxBytes + txBytes
+                        it.mobileRxBytes = rxBytes
+                        it.mobileTxBytes = txBytes
+                    } ?: run {
+                        Log.d("NetworkUsage", "UID: $localUid, map[localUid] is null ")
+                        val trafficInfo = TrafficInfo().apply {
+                            uid = localUid
+                            wifiTotalData = rxBytes + txBytes
+                            wifiRxBytes = rxBytes
+                            wifiTxBytes = txBytes
+                        }
+                        localList.add(trafficInfo)
+                        localMap[localUid] = trafficInfo
+                    }
 
                     Log.d(
                         "NetworkUsage",
-                        "UID: $uid, Mobile Data Received: $rxBytes bytes, Mobile Data Sent: $txBytes bytes"
+                        "UID: $localUid, Mobile Data Received: $rxBytes bytes, Mobile Data Sent: $txBytes bytes"
                     )
                 }
             } ?: {
                 Log.d(TAG, "getNetworkUsageStats: mobileStats is null")
             }
-
+            return localMap
         } catch (e: RemoteException) {
             e.printStackTrace()
             Log.e(TAG, "getNetworkUsageStats: ", e)
         }
+
+        return localMap
     }
 
 }

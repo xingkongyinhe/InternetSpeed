@@ -32,6 +32,17 @@
         android:textSize="16sp"
         app:layout_constraintTop_toBottomOf="@id/text_dashboard" />
 
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvGetInstallTrafficApp"
+        android:layout_width="match_parent"
+        android:layout_height="45dp"
+        android:layout_marginHorizontal="8dp"
+        android:layout_marginTop="8dp"
+        android:gravity="center"
+        android:text="@string/get_install_traffic_app"
+        android:textSize="16sp"
+        app:layout_constraintTop_toBottomOf="@id/tvGetInstallApp" />
+
     <!--获取流量-->
     <androidx.appcompat.widget.AppCompatTextView
         android:id="@+id/tvGetTraffic"
@@ -42,7 +53,7 @@
         android:gravity="center"
         android:text="@string/get_traffic"
         android:textSize="16sp"
-        app:layout_constraintTop_toBottomOf="@id/tvGetInstallApp" />
+        app:layout_constraintTop_toBottomOf="@id/tvGetInstallTrafficApp" />
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>

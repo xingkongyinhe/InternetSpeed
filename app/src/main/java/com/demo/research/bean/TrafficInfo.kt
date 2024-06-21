@@ -13,7 +13,7 @@ class TrafficInfo {
     var appName: String? = null
 
     //包名
-    var packName: String? = null
+    var packageName: String? = null
 
     //uid
     var uid = 0
@@ -41,7 +41,7 @@ class TrafficInfo {
     constructor(icon: Drawable?, appName: String?, packName: String?, uid: Int) {
         this.icon = icon
         this.appName = appName
-        this.packName = packName
+        this.packageName = packName
         this.uid = uid
     }
 
