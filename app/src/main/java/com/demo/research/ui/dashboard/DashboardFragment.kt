@@ -88,17 +88,20 @@ class DashboardFragment : Fragment() {
     private fun loadingInstallTrafficAppList() {
 
         context?.let { it ->
-            val localMap = NetworkUsageManager().getNetworkUsageStats(it)
-            AppInfoManager.getInternetTrafficInfoList(it, localMap).apply {
+            val localMap = NetworkUsageManager().getNetworkUsageStats(it).apply {
+                Log.i(TAG, "loadingInstallTrafficAppList: map size is $size")
+            }
+            val list = AppInfoManager.getInternetTrafficInfoList(it, localMap)
+            val list2 = AppInfoManager.removeDuplicateUids(list)
+            AppInfoManager.sortTrafficInfosByTotalData(list2).apply {
                 Log.i(TAG, "getInternetTrafficInfoList: total app num is $size")
                 onEach {
                     Log.i(
                         TAG,
-                        "getInternetTrafficInfoList: ${it.appName}, wifi traffic is ${
+                        "getInternetTrafficInfoList: uid is ${it.uid}, ${it.appName}, wifi traffic is ${
                             TrafficFormat.formatByte(it.wifiTotalData)
                         }, mobile traffic is ${TrafficFormat.formatByte(it.mobileTotalData)}"
                     )
-                    localMap[it.uid]
                 }
             }
         }

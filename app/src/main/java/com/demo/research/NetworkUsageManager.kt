@@ -9,6 +9,7 @@ import android.os.Build
 import android.os.RemoteException
 import android.telephony.TelephonyManager
 import android.util.Log
+import com.demo.research.AppInfoManager.getPackageNameByUid
 import com.demo.research.DateUtil.getTimesMonthmorning
 import com.demo.research.DateUtil.getTimesmorning
 import com.demo.research.bean.TrafficBean
@@ -37,6 +38,7 @@ class NetworkUsageManager {
             context.getSystemService(Context.NETWORK_STATS_SERVICE) as? NetworkStatsManager
         val trafficBean = TrafficBean()
         val bucket = try {
+            // 查询网络使用统计摘要，结果是整个设备的汇总数据使用情况，结果是随着时间、状态、uid、标签、计量和漫游聚合的单个存储桶
             networkStatsManager?.querySummaryForDevice(
                 ConnectivityManager.TYPE_MOBILE,
                 getSubscriberId(context),
@@ -124,7 +126,9 @@ class NetworkUsageManager {
         } catch (e: RemoteException) {
             e.printStackTrace()
         } finally {
-            networkStats?.close()
+            runCatching {
+                networkStats?.close()
+            }
         }
         return trafficBean
     }
@@ -158,17 +162,17 @@ class NetworkUsageManager {
         val networkStatsManager =
             context.getSystemService(Context.NETWORK_STATS_SERVICE) as? NetworkStatsManager
 
-        val localList = mutableListOf<TrafficInfo>()
-
         val localMap = HashMap<Int, TrafficInfo>()
-
+        var wifiStats: NetworkStats? = null
+        var mobileStats: NetworkStats? = null
         try {
             // 获取Wi-Fi数据使用情况
-            val wifiStats = networkStatsManager?.querySummary(
+            // 查询网络使用统计摘要（查询多个应用流量统计）。
+            wifiStats = networkStatsManager?.querySummary(
                 ConnectivityManager.TYPE_WIFI,
                 "",
-                0,
-                System.currentTimeMillis()
+                0, // 查询指定时间段 开始时间戳
+                System.currentTimeMillis() // 查询指定时间段 结束时间戳
             )
 
             val wifiBucket = NetworkStats.Bucket()
@@ -178,30 +182,37 @@ class NetworkUsageManager {
                     val localUid = wifiBucket.uid
                     val rxBytes = wifiBucket.rxBytes
                     val txBytes = wifiBucket.txBytes
-                    val trafficInfo = TrafficInfo().apply {
-                        uid = localUid
-                        wifiTotalData = rxBytes + txBytes
-                        wifiRxBytes = rxBytes
-                        wifiTxBytes = txBytes
+                    localMap[localUid]?.let {
+                        it.wifiTotalData += rxBytes + txBytes
+                        it.wifiRxBytes += rxBytes
+                        it.wifiTxBytes += txBytes
+                    } ?: run {
+                        if (rxBytes + txBytes > 0) {
+                            val trafficInfo = TrafficInfo().apply {
+                                uid = localUid
+                                wifiTotalData = rxBytes + txBytes
+                                wifiRxBytes = rxBytes
+                                wifiTxBytes = txBytes
+                            }
+                            localMap[localUid] = trafficInfo
+                        }
                     }
-                    localList.add(trafficInfo)
-                    localMap[localUid] = trafficInfo
 
                     Log.d(
                         "NetworkUsage",
-                        "UID: $localUid, Wi-Fi Data Received: $rxBytes bytes, Wi-Fi Data Sent: $txBytes bytes"
+                        "UID: $localUid, packageName: ${getPackageNameByUid(context, localUid)}, Wi-Fi Data Received: $rxBytes bytes, Wi-Fi Data Sent: $txBytes bytes"
                     )
                 }
             }
 
             // 获取移动数据使用情况
-            val mobileStats = networkStatsManager?.querySummary(
+            // 查询网络使用统计摘要（查询多个应用流量统计）。
+            mobileStats = networkStatsManager?.querySummary(
                 ConnectivityManager.TYPE_MOBILE,
                 getSubscriberId(context),
-                0,
-                System.currentTimeMillis()
+                0, // 查询指定时间段 开始时间戳
+                System.currentTimeMillis() // 查询指定时间段 结束时间戳
             )
-
 
             mobileStats?.let { it ->
                 val mobileBucket = NetworkStats.Bucket()
@@ -211,21 +222,22 @@ class NetworkUsageManager {
                     val localUid = mobileBucket.uid
                     val rxBytes = mobileBucket.rxBytes
                     val txBytes = mobileBucket.txBytes
-                    localMap[localUid]?.let {
-                        Log.d("NetworkUsage", "UID: $localUid, map[localUid] ")
-                        it.mobileTotalData = rxBytes + txBytes
-                        it.mobileRxBytes = rxBytes
-                        it.mobileTxBytes = txBytes
-                    } ?: run {
-                        Log.d("NetworkUsage", "UID: $localUid, map[localUid] is null ")
-                        val trafficInfo = TrafficInfo().apply {
-                            uid = localUid
-                            wifiTotalData = rxBytes + txBytes
-                            wifiRxBytes = rxBytes
-                            wifiTxBytes = txBytes
+                    if (rxBytes + txBytes > 0) {
+                        localMap[localUid]?.let {
+                            Log.d("NetworkUsage", "UID: $localUid, map[localUid] ")
+                            it.mobileTotalData += rxBytes + txBytes
+                            it.mobileRxBytes += rxBytes
+                            it.mobileTxBytes += txBytes
+                        } ?: run {
+                            Log.d("NetworkUsage", "UID: $localUid, map[localUid] is null ")
+                            val trafficInfo = TrafficInfo().apply {
+                                uid = localUid
+                                mobileTotalData = rxBytes + txBytes
+                                mobileRxBytes = rxBytes
+                                mobileTxBytes = txBytes
+                            }
+                            localMap[localUid] = trafficInfo
                         }
-                        localList.add(trafficInfo)
-                        localMap[localUid] = trafficInfo
                     }
 
                     Log.d(
@@ -240,6 +252,11 @@ class NetworkUsageManager {
         } catch (e: RemoteException) {
             e.printStackTrace()
             Log.e(TAG, "getNetworkUsageStats: ", e)
+        } finally {
+            runCatching {
+                wifiStats?.close()
+                mobileStats?.close()
+            }
         }
 
         return localMap
